@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.TimeUnit;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -38,6 +39,8 @@ public class ImageViewerWindowController implements Initializable {
 
     @FXML
     public ImageView imageView;
+
+    private Object lock = new Object();
 
 
     @Override
@@ -106,22 +109,24 @@ public class ImageViewerWindowController implements Initializable {
     @FXML
     private void handleBtnSlideshow(ActionEvent actionEvent) {
 
-        isSlideshowActive ^= true;
+        isSlideshowActive = !isSlideshowActive;
 
         if (!images.isEmpty()) {
-            Runnable runnable = () -> {
-                while(!isSlideshowActive) {
-                    System.out.println(Thread.currentThread().getName());
-                    displayNextImage();
-                    try {
-                        TimeUnit.SECONDS.sleep(showtime);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+            Thread thread = new Thread(() -> {
+                synchronized (lock) {
+                    while(!isSlideshowActive) {
+                        System.out.println(Thread.currentThread().getName());
+                        Platform.runLater(() -> displayNextImage());
+                        try {
+                            TimeUnit.SECONDS.sleep(showtime);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
-            };
+            });
+            thread.setDaemon(true);
 
-            Thread thread = new Thread(runnable);
             if (!isSlideshowActive) {
                 slideshowBtn.setText("Stop slideshow");
                 if(!thread.isAlive())
@@ -136,7 +141,6 @@ public class ImageViewerWindowController implements Initializable {
                     e.printStackTrace();
                 }
             }
-
             // TODO: FIX MULTIPLE THREADS
 
         } else {
