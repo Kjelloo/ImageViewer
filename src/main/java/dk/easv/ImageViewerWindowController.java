@@ -15,6 +15,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -24,6 +25,7 @@ import javafx.stage.Stage;
 
 public class ImageViewerWindowController implements Initializable {
     public static final List<Image> images = new ArrayList<>();
+    public static final List<File> files = new ArrayList<>();
     public static int currentImageIndex = 0;
     private long showtime;
     private boolean isSlideshowActive;
@@ -39,6 +41,8 @@ public class ImageViewerWindowController implements Initializable {
 
     @FXML
     public ImageView imageView;
+    @FXML
+    private Label fileLabel;
 
     private Object lock = new Object();
 
@@ -64,7 +68,7 @@ public class ImageViewerWindowController implements Initializable {
         fileChooser.getExtensionFilters().add(new ExtensionFilter("Images",
                 "*.png", "*.jpg", "*.gif", "*.tif", "*.bmp"));
         List<File> files = fileChooser.showOpenMultipleDialog(new Stage());
-
+        this.files.addAll(files);
         if (!files.isEmpty()) {
             files.forEach((File f) ->
             {
@@ -102,6 +106,7 @@ public class ImageViewerWindowController implements Initializable {
     public void displayImage() {
         if (!images.isEmpty()) {
             imageView.setImage(images.get(currentImageIndex));
+            fileLabel.setText("File: " + files.get(currentImageIndex).getName());
             System.out.println(currentImageIndex);
         }
     }
