@@ -1,11 +1,13 @@
 package dk.easv;
 
+import java.awt.*;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -43,8 +45,13 @@ public class ImageViewerWindowController implements Initializable {
     public ImageView imageView;
     @FXML
     private Label fileLabel;
+    @FXML
+    public Label rgbLabel;
 
     private Object lock = new Object();
+
+    private Object lockPixels = new Object();
+
 
 
     @Override
@@ -107,7 +114,7 @@ public class ImageViewerWindowController implements Initializable {
         if (!images.isEmpty()) {
             imageView.setImage(images.get(currentImageIndex));
             fileLabel.setText("File: " + files.get(currentImageIndex).getName());
-            System.out.println(currentImageIndex);
+            getPixelColor(images.get(currentImageIndex));
         }
     }
 
@@ -120,7 +127,6 @@ public class ImageViewerWindowController implements Initializable {
             Thread thread = new Thread(() -> {
                 synchronized (lock) {
                     while(!isSlideshowActive) {
-                        System.out.println(Thread.currentThread().getName());
                         Platform.runLater(() -> displayNextImage());
                         try {
                             TimeUnit.SECONDS.sleep(showtime);
@@ -146,10 +152,48 @@ public class ImageViewerWindowController implements Initializable {
                     e.printStackTrace();
                 }
             }
-            // TODO: FIX MULTIPLE THREADS
 
         } else {
             System.out.println("Image list is empty!");
         }
+    }
+
+    public void getPixelColor(Image image) {
+        AtomicInteger red = new AtomicInteger();
+        AtomicInteger green = new AtomicInteger();
+        AtomicInteger blue = new AtomicInteger();
+        AtomicInteger mixed = new AtomicInteger();
+
+        Thread thread = new Thread(() -> {
+            synchronized (lockPixels) {
+                for (int i = 0; i < image.getHeight(); i++) {
+                    for (int j = 0; j < image.getWidth(); j++) {
+                        int pixels = image.getPixelReader().getArgb(j, i);
+                        Color color = new Color(pixels, true);
+
+                        if(color.getRed() > color.getGreen() && color.getRed() > color.getBlue()) {
+                            red.set(red.get() + 1);
+                        } else if(color.getGreen() > color.getRed() && color.getGreen() > color.getBlue()) {
+                            green.set(green.get() + 1);
+                        } else if (color.getBlue() > color.getRed() && color.getBlue() > color.getGreen()) {
+                            blue.set(blue.get() + 1);
+                        } else {
+                            mixed.set(mixed.get() + 1);
+                        }
+
+                    }
+                }
+                Platform.runLater(() -> {
+                    setRgbLabel(new RGB(red.get(), green.get(), blue.get(), mixed.get()));
+                });
+            }
+        });
+
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void setRgbLabel(RGB rgb) {
+        rgbLabel.setText(rgb.toString());
     }
 }
